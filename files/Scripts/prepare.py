@@ -25,57 +25,15 @@ def initial_setup():
     os.makedirs('/ut-data/System', exist_ok=True)
     os.makedirs('/ut-data/Textures', exist_ok=True)
 
-    # Initialize ini with good default values
-    ## Enable the web admin and set username/password
-    set_config_value(utIniFileServer, 'UWeb.WebServer', 'bEnabled', 'True')
-    set_config_value(utIniFileServer, 'UWeb.WebServer', 'ListenPort', '5580')
-    set_config_value(utIniFileServer, 'UTServerAdmin.UTServerAdmin', 'AdminUsername', 'admin')
-    set_config_value(utIniFileServer, 'UTServerAdmin.UTServerAdmin', 'AdminPassword', 'admin')
-    ## Replace / Add Server information
-    set_config_value(utIniFileServer, 'Engine.GameReplicationInfo', 'ServerName', 'My UT Server')
-    set_config_value(utIniFileServer, 'Engine.GameReplicationInfo', 'AdminName', 'UTAdmin')
-    set_config_value(utIniFileServer, 'Engine.GameReplicationInfo', 'AdminEmail', 'no@one.com')
-    set_config_value(utIniFileServer, 'Engine.GameReplicationInfo', 'MOTDLine1', 'Have Fun')
-    ## Replace / Add Admin and Game password
-    set_config_value(utIniFileServer, 'Engine.GameInfo', 'AdminPassword', 'admin')
-    set_config_value(utIniFileServer, 'Engine.GameInfo', 'GamePassword', '')
-    ## Add some bots by default
-    set_config_value(utIniFileServer, 'Botpack.DeathMatchPlus', 'MinPlayers', '4')
-    set_config_value(utIniFileServer, 'Botpack.CTFGame', 'MinPlayers', '8')
-    set_config_value(utIniFileServer, 'Botpack.DeathMatchPlus', 'InitialBots', '4')
-    set_config_value(utIniFileServer, 'Botpack.CTFGame', 'InitialBots', '8')
-    ## Section to enable/disable publishing the server in the server list
-    set_config_value(utIniFileServer, 'IpServer.UdpServerUplink', 'DoUpLink', 'True')
-    set_config_value(utIniFileServer, 'IpServer.UdpServerUplink', 'UpdateMinutes', '1')
-    set_config_value(utIniFileServer, 'IpServer.UdpServerUplink', 'MasterServerPort', '27900')
-    ## Add server visibility in server browser inside game by adding correct URLs
-    set_config_value(utIniFileServer, 'Engine.GameEngine', 'ServerActors', 'IpServer.UdpServerUplink MasterServerAddress=utmaster.epicgames.com MasterServerPort=27900', True)
-    set_config_value(utIniFileServer, 'Engine.GameEngine', 'ServerActors', 'IpServer.UdpServerUplink MasterServerAddress=master.333networks.com MasterServerPort=27900', True)
-
-    # Add Mutators
+    # Mutator fixes
     ## CustomCrossHairScale
-    set_config_value(utIniFileServer, 'Engine.GameEngine', 'ServerPackages', 'CCHS4', True)
-    set_config_value(utIniFileServer, 'Engine.GameEngine', 'ServerActors', 'CCHS4.CCHS', True)
     os.remove(f"/{utDataPath}/System/CCHS4.int")
-    ## FlagAnnouncementsV2
-    set_config_value(utIniFileServer, 'Engine.GameEngine', 'ServerPackages', 'FlagAnnouncementsV2', True)
-    set_config_value(utIniFileServer, 'Engine.GameEngine', 'ServerPackages', 'DefaultAnnouncements', True)
-    ## KickIdlePlayers2
-    set_config_value(utIniFileServer, 'Engine.GameEngine', 'ServerPackages', 'KickIdlePlayers2', True)
-    ## MapVoteLAv2
-    set_config_value(utIniFileServer, 'Engine.GameEngine', 'ServerPackages', 'MapVoteLAv2', True)
-    ## WhoPushedMe
-    set_config_value(utIniFileServer, 'Engine.GameEngine', 'ServerPackages', 'EnhancedItems', True)
-    set_config_value(utIniFileServer, 'Engine.GameEngine', 'ServerPackages', 'WhoPushedMe', True)
-    ## ZeroPingPlus103
-    set_config_value(utIniFileServer, 'Engine.GameEngine', 'ServerPackages', 'ZeroPingPlus103', True)
 
     # Move and/or symlink the original ini files
     move_and_symlink(utIniFileServer, utIniFileData)
     move_and_symlink(userIniFileServer, userIniFileData)
 
     # Fix some file cases (to prevent a warning)
-#    os.rename(f"/{utServerPath}/System/BotPack.u", f"/{utServerPath}/System/Botpack.u")
     os.rename(f"/{utServerPath}/Textures/UTcrypt.utx", f"/{utServerPath}/Textures/utcrypt.utx")
     os.rename(f"/{utServerPath}/Textures/GenFluid.utx", f"/{utServerPath}/Textures/genfluid.utx")
     os.rename(f"/{utServerPath}/Textures/Soldierskins.utx", f"/{utServerPath}/Textures/SoldierSkins.utx")
@@ -198,7 +156,7 @@ def set_config_value(filePath, section, key, value, alwaysInsert=False):
         index += 1
         contents.insert(index, f"[{section}]\n")
         index += 1
-    elif index == len(contents) - 1:        
+    elif index == len(contents) - 1:
         # We are at the very last line, increase the index so we add the new value below at the end
         index += 1
     else:
@@ -207,6 +165,62 @@ def set_config_value(filePath, section, key, value, alwaysInsert=False):
     # Insert the new value
     newLine = f"{key}={value}\n"
     contents.insert(index, newLine)
+    # Write back the file
+    f = open(filePath, "w")
+    f.writelines(contents)
+    f.close()
+
+def rem_config_value(filePath, section, key, value):
+    """
+    This method removes an exiting key.
+
+    Args:
+        filePath (str)    : The path to the file.
+        section (str)     : The desired section name.
+        key (str)         : The desired key.
+        value (str)       : The desired value.
+    """
+    # Read all lines of the file (including newlines)
+    f = open(filePath, "r")
+    contents = f.readlines()
+    f.close()
+    # Loop thru all existing lines
+    inSection = False
+    foundKey = False
+    for index, line in enumerate(contents):
+        # Skip empty lines
+        if len(line) == 0:
+            continue
+        # Skip comments
+        if line[0] == '#' or line[0] == '/':
+            continue
+        # We found a section start
+        if line[0] == '[':
+            currSection = line[1:line.index(']')]
+            # Check if we are in the desired section
+            if currSection == section:
+                inSection = True
+                continue
+            else:
+                # If we're in the desired section and found another section, break out of the loop
+                if inSection:
+                    break
+        # No section header found but we are in the desired section
+        elif inSection:
+            # Make sure there is an = so it should be a key/value pair
+            if '=' in line:
+                # Parse the key and value
+                (currKey, currValue) = line.split('=', 1)
+                # If the key is the desired key
+                if (currKey == key):
+                    if (currValue.strip() == value):
+                        # The value is aleady the desired value, so skip it.
+                        foundKey = True
+                        break
+
+    if (foundKey):
+        # We found a key that matches the value, so delete it.
+        del contents[index]
     # Write back the file
     f = open(filePath, "w")
     f.writelines(contents)

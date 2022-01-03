@@ -6,15 +6,23 @@ services:
     volumes:
       - ut99-data:/ut-data
     ports:
-      - 5580:5580
+      # We may not need all of these ports, but this is what worked to get it
+      # to show up on the master server; the web admin console is exposed on
+      # 5580 so you may not want to open that port through your WAN firewall
+      - 5580:5580/tcp
       - 7777:7777/udp
       - 7778:7778/udp
+      - 7779:7779/udp
+      - 7780:7780/udp
+      - 7781:7781/udp
       - 8777:8777/udp
+      - 27900:27900/tcp
+      - 27900:27900/udp
     environment:
       - UT_SERVERURL="CTF-Face?game=BotPack.CTFGame?mutator=BotPack.InstaGibDM,MapVoteLAv2.BDBMapVote,FlagAnnouncementsV2.FlagAnnouncements"
       - UT_SERVERNAME='My UT Server'
       - UT_ADMINNAME='UTAdmin'
-      - UT_ADMINEMAIL='no@one.com'
+      - "UT_ADMINEMAIL=no@one.com"
       - UT_MOTD1='Have Fun'
       - UT_ADMINPWD='admin'
       - UT_WEBADMINUSER='admin'
